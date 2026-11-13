@@ -1119,7 +1119,6 @@ Sol: From I, x = 5, 6. From II, y = 7, 8. Clearly x < y.`
     </div>
   )
 }
-
 // ==========================================
 // 4. STRICT TCS iON EXAM ARENA (/test/:testId)
 // ==========================================
@@ -1148,7 +1147,7 @@ function ExamArena({ onOpenUpgrade }) {
   const [timeLeft, setTimeLeft] = useState(900)
   const [timeLogs, setTimeLogs] = useState({})
 
-const enterFullScreen = () => {
+  const enterFullScreen = () => {
     const elem = document.documentElement
     if (elem.requestFullscreen) {
       elem.requestFullscreen().catch(() => {})
@@ -1196,6 +1195,7 @@ const enterFullScreen = () => {
     return () => clearInterval(timer)
   }, [hasStarted, currentIdx, questions.length])
 
+  // Proctoring: Detects Tab Switch, Window Blur, and Full-Screen Exit
   useEffect(() => {
     if (!hasStarted) return
 
@@ -1250,6 +1250,7 @@ const enterFullScreen = () => {
 
   if (!hasStarted) {
     const requiresPayment = test.is_paid && !user?.isPro && user?.role !== 'creator'
+
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="bg-white max-w-md w-full p-7 rounded-3xl shadow-2xl border border-slate-200">
@@ -1271,7 +1272,7 @@ const enterFullScreen = () => {
             <div className="flex justify-between"><span>Time Allowed:</span> <strong>{test.duration_minutes} Minutes</strong></div>
             <div className="flex justify-between"><span>Marking Scheme:</span> <strong className="text-emerald-700">+1.0 / -0.25</strong></div>
             <div className="pt-2 border-t text-[11px] text-amber-800 font-semibold">
-              🛡️ Strict TCS iON Mode: Tab-switching is monitored.
+              🛡️ Strict TCS iON Mode: Full-screen enforced; tab-switching is monitored.
             </div>
           </div>
 
@@ -1311,8 +1312,11 @@ const enterFullScreen = () => {
           ) : (
             <button
               onClick={async () => {
+                if (!user && (!guestName.trim() || !guestEmail.trim())) {
+                  return alert('Please enter your name and email!')
+                }
+                enterFullScreen()
                 if (!user) {
-                  if (!guestName.trim() || !guestEmail.trim()) return alert('Please enter your name and email!')
                   await loginAs(guestEmail, 'student', guestName)
                 }
                 setHasStarted(true)
@@ -1352,6 +1356,10 @@ const enterFullScreen = () => {
     if (submittingRef.current) return
     submittingRef.current = true
 
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    }
+
     let correct = 0
     let wrong = 0
     const responsesMap = {}
@@ -1385,13 +1393,24 @@ const enterFullScreen = () => {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col select-none pb-16 md:pb-0">
       {showWarningModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4">
-          <div className="bg-white max-w-sm w-full p-5 rounded-2xl shadow-2xl border-2 border-red-600 text-center">
-            <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-2" />
-            <h3 className="text-sm font-bold text-slate-900">Warning {warnings}/3: Tab Switch Detected</h3>
-            <p className="text-xs text-slate-600 mt-1 mb-4">Do not leave the exam screen.</p>
-            <button onClick={() => setShowWarningModal(false)} className="w-full py-2 bg-red-600 text-white text-xs font-bold rounded-lg">
-              Resume Exam
+        <div className="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center p-4">
+          <div className="bg-white max-w-sm w-full p-6 rounded-2xl shadow-2xl border-2 border-red-600 text-center">
+            <AlertTriangle className="w-10 h-10 text-red-600 mx-auto mb-2" />
+            <span className="bg-red-100 text-red-800 text-[10px] font-black px-2.5 py-0.5 rounded uppercase">
+              Proctoring Violation • Warning {warnings} of 3
+            </span>
+            <h3 className="text-base font-bold text-slate-900 mt-2">Exam Focus Interrupted!</h3>
+            <p className="text-xs text-slate-600 mt-1 mb-5">
+              Exiting full-screen, switching tabs, or opening other apps is prohibited. On the 3rd warning, your test will auto-submit.
+            </p>
+            <button
+              onClick={() => {
+                enterFullScreen()
+                setShowWarningModal(false)
+              }}
+              className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase rounded-xl cursor-pointer"
+            >
+              Re-Enter Full-Screen & Resume
             </button>
           </div>
         </div>
@@ -1401,6 +1420,11 @@ const enterFullScreen = () => {
         <div className="flex items-center space-x-2 truncate">
           <span className="bg-orange-500 text-[10px] px-1.5 py-0.5 font-black rounded shrink-0">TCS iON</span>
           <h1 className="text-xs md:text-sm font-bold truncate max-w-[140px] sm:max-w-xs">{test.title}</h1>
+          {warnings > 0 && (
+            <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded font-bold shrink-0">
+              ⚠️ {warnings}/3
+            </span>
+          )}
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
@@ -1643,7 +1667,6 @@ const enterFullScreen = () => {
     </div>
   )
 }
-
 // ==========================================
 // 5. MODERN AI DIAGNOSTIC REPORT WITH INTERACTIVE SOLUTION REVIEWER (/result/:attemptId)
 // ==========================================
